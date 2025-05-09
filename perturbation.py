@@ -249,7 +249,7 @@ def main():
     ))
     config.ETA0 = None
 
-    combined_df = run_simulations(df_orig, 100, [1,5,10,20], 'mc_results')
+    combined_df = run_simulations(df_orig, 2, [1,5,10,20], 'mc_results')
     combined_df.to_csv('mc_results/combined_metrics.csv', index=False)
 
     # Define error levels and colors
