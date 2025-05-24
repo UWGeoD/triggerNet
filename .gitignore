@@ -187,3 +187,6 @@ data/*
 *.npz
 *.png
 *.jpg
+
+# macOS Finder files
+.DS_Store
