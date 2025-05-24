@@ -184,6 +184,7 @@ cython_debug/
 *.npz
 *.png
 *.jpg
+*.txt
 
 # macOS Finder files
 .DS_Store
