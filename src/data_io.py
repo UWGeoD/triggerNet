@@ -1,20 +1,20 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-Created on Wed Apr 23 12:15:54 2025
-
-@author: ellie
-
 data_io.py
 
-Functions to load, parse, and filter earthquake catalogs.
+Utility functions for loading, parsing, and filtering earthquake or acoustic emission event catalogs.
+
+Supports:
+    - CSV files (standard pandas format)
+    - MATLAB .mat files (1D arrays with column names)
+
+Standardizes column names to ['time', 'x', 'y', 'mag', (optional) 'z'] and applies magnitude cutoff.
 """
 
 import pandas as pd
-from datetime import datetime
-import config
-import scipy
+import numpy as np
 import os
+import scipy.io
+import config
 
 def load_catalog(
     file_path: str,
@@ -23,60 +23,86 @@ def load_catalog(
     y_col: str = 'y',
     mag_col: str = 'mag',
     z_col: str = None,
-    time_format: str = None
+    time_format: str = None,
 ) -> pd.DataFrame:
     """
-    Load an earthquake catalog from CSV and filter by magnitude.
+    Load an earthquake or AE event catalog from CSV or MAT file.
+    Standardize column names, parse times, and filter by magnitude.
 
     Args:
-        file_path: Path to the CSV catalog.
-        time_col: Name of the time column (to be parsed).
-        lat_col: Name of the latitude (or x) column.
-        lon_col: Name of the longitude (or y) column.
-        mag_col: Name of the magnitude column.
-        depth_col: Optional name of the depth (or z) column.
-        time_format: Optional datetime format for parsing.
-        is_lab: If True, treat (lat_col, lon_col, depth_col) as 3D Euclidean coords.
+        file_path (str): Path to input .csv or .mat catalog.
+        time_col (str): Name of time column in file.
+        x_col (str): Name of x (or longitude/latitude) column in file.
+        y_col (str): Name of y (or latitude/longitude) column in file.
+        mag_col (str): Name of magnitude column in file.
+        z_col (str or None): Optional name of depth/z column.
+        time_format (str or None): Optional datetime format for time parsing (for CSV).
 
     Returns:
-        Filtered, time-sorted DataFrame.
+        pd.DataFrame: Filtered and time-sorted catalog with standardized columns.
     """
     ext = os.path.splitext(file_path)[1].lower()
+
+    # --- Load Data ---
     if ext == '.csv':
-        df = pd.read_csv(file_path)
+        try:
+            df = pd.read_csv(file_path)
+        except Exception as e:
+            raise RuntimeError(f"Failed to load CSV file '{file_path}': {e}")
     elif ext == '.mat':
-        raw = scipy.io.loadmat(file_path)
-        # Filter out meta keys like __header__, __globals__, etc.
+        try:
+            raw = scipy.io.loadmat(file_path)
+        except Exception as e:
+            raise RuntimeError(f"Failed to load MAT file '{file_path}': {e}")
+
+        # Convert .mat structure to DataFrame (flattened 1D arrays)
         data = {}
         for k, v in raw.items():
             if k.startswith("__"):
-                continue
-            v_squeezed = v.squeeze()
-            if v_squeezed.ndim == 1:
-                data[k] = v_squeezed
+                continue  # meta keys
+            v = np.atleast_1d(v).squeeze()
+            if v.ndim == 1:
+                data[k] = v
             else:
-                print(f"Skipping key '{k}' with shape {v.shape} (not 1D)")
+                print(f"[WARN] Skipping key '{k}' with shape {v.shape} (not 1D)")
+        if not data:
+            raise ValueError(f"No valid data arrays found in MAT file '{file_path}'.")
         df = pd.DataFrame(data)
-
     else:
-        raise ValueError("Unsupported file format. Use .csv or .mat")
+        raise ValueError(f"Unsupported file extension '{ext}'. Only .csv and .mat are supported.")
 
-    # Parse times
-    if time_format:
-        df[time_col] = pd.to_datetime(df[time_col], format=time_format)
+    # --- Parse and Standardize Columns ---
+    for req_col in [time_col, x_col, y_col, mag_col]:
+        if req_col not in df.columns:
+            raise ValueError(f"Required column '{req_col}' not found in input file: {file_path}")
 
-    # Standardize columns
-    df = df.rename(columns={
+    rename_dict = {
         time_col: 'time',
         x_col: 'x',
         y_col: 'y',
         mag_col: 'mag'
-    })
-    if z_col:
-        df = df.rename(columns={z_col: 'z'})
+    }
+    if z_col and z_col in df.columns:
+        rename_dict[z_col] = 'z'
 
-    # Filter by magnitude
-    if config.MAG_CUTOFF:
+    df = df.rename(columns=rename_dict)
+
+    # --- Parse Time Column ---
+    if time_format:
+        try:
+            df['time'] = pd.to_datetime(df['time'], format=time_format)
+        except Exception as e:
+            raise RuntimeError(f"Failed to parse time column with format '{time_format}': {e}")
+
+    # --- Filter by Magnitude Cutoff ---
+    if getattr(config, "MAG_CUTOFF", None) is not None:
+        before = len(df)
         df = df[df['mag'] >= config.MAG_CUTOFF].copy()
+        after = len(df)
+        if after < before:
+            print(f"[INFO] Filtered {before-after} events below magnitude cutoff {config.MAG_CUTOFF}.")
+
+    # --- Sort by Time ---
     df = df.sort_values('time').reset_index(drop=True)
+
     return df

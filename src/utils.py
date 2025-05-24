@@ -1,79 +1,103 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-Created on Wed Apr 23 16:24:49 2025
-
-@author: ellie
-
 utils.py
+
+Utility functions for earthquake/fracture catalog analysis:
+
+- Gutenberg-Richter b-value estimation
+- Spatial fractal (correlation) dimension estimation
+
+These functions are used for parameter estimation in the nearest-neighbor clustering pipeline.
 """
 
 import numpy as np
 from scipy.spatial import cKDTree
 from scipy.sparse import coo_matrix
 
-def estimate_b_value(mags, m_min=None, Δm=None):
+def estimate_b_value(mags, m_min=None, bin_width=None):
     """
-    Maximum-likelihood estimate of Gutenberg-Richter b-value.
-    b = log10(e) / (mean(mags) - (m_min - Δm/2))
+    Maximum-likelihood estimation of Gutenberg-Richter b-value.
+
+    The b-value quantifies the relative occurrence of large and small events:
+        b = log10(e) / (mean(mags) - (m_min - bin_width/2))
 
     Args:
-        mags : 1D array of magnitudes.
-        m_min: minimum magnitude cutoff (if None, use mags.min()).
-        Δm   : magnitude bin width (if None, assume 0.1).
+        mags (array-like): Sequence of event magnitudes.
+        m_min (float, optional): Minimum magnitude cutoff. If None, use minimum of mags.
+        bin_width (float, optional): Magnitude bin width. If None, estimated from data.
+
     Returns:
-        b_est : estimated b-value.
+        float: Estimated b-value.
+
+    Raises:
+        ValueError: If mags is empty or has insufficient unique values for bin width estimation.
+
+    Reference:
+        Aki, K. (1965). Maximum likelihood estimate of b in the formula log N = a - bM.
     """
     mags = np.asarray(mags)
+    if mags.size == 0:
+        raise ValueError("Empty magnitude array passed to estimate_b_value.")
     if m_min is None:
         m_min = mags.min()
-    if Δm is None:
-        # typical magnitude bin (catalog resolution)
-        Δm = np.min(np.diff(np.unique(np.round(mags, 3))))  
+    if bin_width is None:
+        unique_mags = np.unique(np.round(mags, 3))
+        if len(unique_mags) < 2:
+            bin_width = 0.1
+        else:
+            bin_width = np.min(np.diff(unique_mags))
     mean_mag = mags.mean()
-    b_est = np.log10(np.e) / (mean_mag - (m_min - Δm/2))
+    b_est = np.log10(np.e) / (mean_mag - (m_min - bin_width / 2))
     return b_est
 
-# Using a section of the distribution which obeys the power law distribution and
-# fits the AE fractal dimension definition (𝜇(𝑅 < 𝑟𝑖) = 𝐴ℎ𝑟𝑖𝐷𝑓), 𝐷𝑓 can be 
-# obtained with 𝑙𝑜𝑔𝜇 =𝑐𝑜𝑛𝑠𝑡𝑎𝑛𝑡 + 𝐷𝑓 ∗ 𝑙𝑜𝑔𝑟 𝑖.
-def estimate_fractal_dimension(coords, r_vals=None):  ###### just use 1.6
+
+def estimate_fractal_dimension(coords, r_vals=None):
     """
-    Estimate spatial fractal (correlation) dimension using the
-    pair-count method: C(r) ~ r^D₂.
+    Estimate spatial fractal (correlation) dimension using the pair-count method.
+
+    The correlation dimension Df is the slope in log-log space:
+        C(r) ~ r^Df
+    where C(r) is the fraction of pairs within distance r.
 
     Args:
-        coords: (N×d) array of spatial positions (e.g. lat/lon or x/y/z).
-        r_vals: radii at which to compute C(r). If None, auto-pick log-spaced.
+        coords (array-like): (N, d) array of event positions (x/y or x/y/z).
+        r_vals (array-like, optional): Radii at which to compute C(r). If None, auto-chosen.
+
     Returns:
-        D2 : estimated fractal (correlation) dimension (slope of log C vs. log r).
+        float: Estimated fractal (correlation) dimension.
+
+    Reference:
+        Grassberger, P., & Procaccia, I. (1983). Characterization of strange attractors.
     """
     pts = np.asarray(coords)
-    N, d = pts.shape
+    if pts.ndim != 2:
+        raise ValueError(f"coords must be 2D array of shape (N, d), got {pts.shape}")
 
-    # build fast tree
+    N = pts.shape[0]
+    if N < 2:
+        raise ValueError("At least two points required for fractal dimension estimation.")
+
+    # Build k-d tree for fast neighbor counting
     tree = cKDTree(pts)
 
-    # choose radii
+    # Choose radii for correlation sum
     if r_vals is None:
-        # from 1% to 25% of max pairwise distance
+        # Compute all pairwise distances, ignore zeros on diagonal
         dmat = tree.sparse_distance_matrix(tree, max_distance=np.inf)
-        dmat = coo_matrix(dmat)  # Convert to COO format
+        dmat = coo_matrix(dmat)
+        if dmat.data.size == 0:
+            raise ValueError("All points are identical; cannot estimate fractal dimension.")
         dmax = np.max(dmat.data)
-        r_vals = np.logspace(np.log10(dmax*0.01), np.log10(dmax*0.25), num=20)
+        r_vals = np.logspace(np.log10(dmax * 0.01), np.log10(dmax * 0.25), num=20)
 
     C = []
     for r in r_vals:
-        # count all pairs (i<j) with distance <= r
-        # cKDTree.count_neighbors counts all pairs, including i=j; subtract N
+        # cKDTree.count_neighbors counts all pairs (including i=j); subtract N for self-pairs
         count = tree.count_neighbors(tree, r) - N
-        # normalize by N*(N-1)
-        C.append(count / (N*(N-1)))
+        # Normalize by total number of pairs (N choose 2)
+        C.append(count / (N * (N - 1)))
 
-    # fit slope in the linear region of log(C) vs. log(r)
+    # Fit slope in linear region of log(C) vs log(r)
     log_r = np.log(r_vals)
     log_C = np.log(C)
-    # do a simple linear fit
     slope, _ = np.polyfit(log_r, log_C, 1)
-    # D2 ≈ slope
     return float(slope)
