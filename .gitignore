@@ -173,18 +173,5 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-# Results, logs, and generated files
-*.log
-*.out
-
-# Data files (if you don't want to track raw/intermediate data)
-*.csv
-*.mat
-*.h5
-*.npz
-*.png
-*.jpg
-*.txt
-
 # macOS Finder files
 .DS_Store
