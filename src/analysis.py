@@ -14,8 +14,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.mixture import GaussianMixture
 from clustering import compute_nnd
+from scipy.stats import gaussian_kde
+import config
 
-def find_nthresh(df, **gmm_kwargs):
+def find_nthresh(df, runs=10, **gmm_kwargs):
     """
     Estimate the η threshold (η₀) using a Gaussian Mixture Model (GMM)
     fit to the log10(η) distribution from original and shuffled catalogs.
@@ -37,14 +39,14 @@ def find_nthresh(df, **gmm_kwargs):
     mask_r = np.isfinite(real_eta) & (real_eta > 0)
     mask_s = np.isfinite(rand_eta) & (rand_eta > 0)
     X = np.log10(np.concatenate([real_eta[mask_r], rand_eta[mask_s]]))[:, None]
-
+    
     gmm = GaussianMixture(n_components=2, **gmm_kwargs).fit(X)
     mu, cov, w = gmm.means_.flatten(), gmm.covariances_.flatten(), gmm.weights_.flatten()
     idx = np.argsort(mu)
     mu0, mu1 = mu[idx[0]], mu[idx[1]]
     s0, s1 = np.sqrt(cov[idx[0]]), np.sqrt(cov[idx[1]])
     w0, w1 = w[idx[0]], w[idx[1]]
-
+    
     A = 1 / (2 * s1**2) - 1 / (2 * s0**2)
     B = mu0 / (s0**2) - mu1 / (s1**2)
     C = (mu1**2) / (2 * s1**2) - (mu0**2) / (2 * s0**2) - np.log((w1 * s0) / (w0 * s1))
@@ -56,14 +58,37 @@ def find_nthresh(df, **gmm_kwargs):
         r2 = (-B - np.sqrt(disc)) / (2 * A)
         # Select intersection between means
         x_star = r1 if mu0 < r1 < mu1 else r2
-
+    
     eta_star = 10 ** x_star
-    return eta_star
+    return eta_star, None
+
+    # thresh_seed_pairs = []
+    # for i in range(runs):
+    #     # --- Shuffled ---
+    #     nnd_rand_dict = shuffle_and_compute_nnd(df, seed=i)
+    #     nnd_rand = nnd_rand_dict['nnd']
+    #     mask_rand = np.isfinite(nnd_rand)
+    #     log_eta_rand = np.log10(nnd_rand[mask_rand].astype(np.complex128))
+    #     log_eta_rand = np.real(log_eta_rand)
+    #     mask_log_rand = np.isfinite(log_eta_rand)
+    #     log_eta_rand = log_eta_rand[mask_log_rand]
+    #     quantile = 0.0005  # 5th percentile; adjust as needed (e.g., 0.01 for 1%)
+    #     thresh = np.quantile(log_eta_rand, quantile)
+    #     thresh_seed_pairs.append((thresh, i))
+
+    # # Find the median threshold and its associated seed
+    # thresh_arr = np.array([pair[0] for pair in thresh_seed_pairs])
+    # seeds_arr = np.array([pair[1] for pair in thresh_seed_pairs])
+    # median_idx = np.argsort(thresh_arr)[len(thresh_arr)//2]
+    # median_thresh = thresh_arr[median_idx]
+    # median_seed = seeds_arr[median_idx]
+    # return 10**median_thresh, median_seed
 
 
 def shuffle_and_compute_nnd(df, seed=None):
     """
-    Shuffle columns of the input catalog independently, then compute nearest-neighbor distances.
+    Shuffle rows of the (x,y) location together, but shuffle time and mag separately,
+    then compute nearest‑neighbor distances.
 
     Args:
         df (pd.DataFrame): Catalog with columns ['time','x','y','mag'] (optionally 'z').
@@ -71,22 +96,33 @@ def shuffle_and_compute_nnd(df, seed=None):
 
     Returns:
         dict: Output from compute_nnd() on the shuffled catalog.
-
-    Notes:
-        Used to generate null model for threshold estimation or for diagnostics.
     """
     rng = np.random.RandomState(seed)
-    shuffled = df.copy()
-    shuffled['x'] = df['x'].sample(frac=1, random_state=rng).values
-    shuffled['y'] = df['y'].sample(frac=1, random_state=rng.randint(0, 2**32)).values
-    shuffled['time'] = df['time'].sample(frac=1, random_state=rng.randint(0, 2**32)).values
-    shuffled['mag'] = df['mag'].sample(frac=1, random_state=rng.randint(0, 2**32)).values
-    if 'z' in df:
-        shuffled['z'] = df['z'].sample(frac=1, random_state=rng.randint(0, 2**32)).values
+    N = len(df)
 
+    # Independent random permutations (like randperm in MATLAB)
+    perm1 = rng.permutation(N)
+    perm2 = rng.permutation(N)
+    perm3 = rng.permutation(N)
+
+    shuffled = df.copy()
+
+    # Shuffle (x, y) together using perm1
+    shuffled[['x', 'y']] = df.loc[perm1, ['x', 'y']].values
+
+    # Shuffle time using perm2
+    shuffled['time'] = df.loc[perm2, 'time'].values
+
+    # Shuffle mag using perm3
+    shuffled['mag'] = df.loc[perm3, 'mag'].values
+
+    # If 'z' exists, shuffle it with (x, y)
+    if 'z' in df.columns:
+        shuffled['z'] = df.loc[perm1, 'z'].values
+
+    # Now pass to your NND function
     nnd_rand = compute_nnd(shuffled)
     return nnd_rand
-
 
 def plot_log_eta_hist(df, bins=50, seed=None):
     """
@@ -100,30 +136,45 @@ def plot_log_eta_hist(df, bins=50, seed=None):
     Returns:
         fig, ax: Matplotlib Figure and Axes objects.
     """
-
-    # Check if nnd column exists
+    
     if 'nnd' not in df.columns:
         raise ValueError("Input DataFrame must include a 'nnd' column.")
 
-    orig = np.log10(df['nnd'][np.isfinite(df['nnd']) & (df['nnd'] > 0)].to_numpy())
+    # --- Original ---
+    nnd_orig = df['nnd'].to_numpy()
+    mask_orig = np.isfinite(nnd_orig)
+    log_eta_orig = np.log10(nnd_orig[mask_orig].astype(np.complex128))
+    log_eta_orig = np.real(log_eta_orig)
+    mask_log_orig = np.isfinite(log_eta_orig)
+    log_eta_orig = log_eta_orig[mask_log_orig]
 
-    # Compute shuffled nnd
+    # --- Shuffled ---
     nnd_rand_dict = shuffle_and_compute_nnd(df, seed=seed)
-    rand_nnd = nnd_rand_dict['nnd']
-    rand = np.log10(rand_nnd[np.isfinite(rand_nnd) & (rand_nnd > 0)])
+    nnd_rand = nnd_rand_dict['nnd']
+    mask_rand = np.isfinite(nnd_rand)
+    log_eta_rand = np.log10(nnd_rand[mask_rand].astype(np.complex128))
+    log_eta_rand = np.real(log_eta_rand)
+    mask_log_rand = np.isfinite(log_eta_rand)
+    log_eta_rand = log_eta_rand[mask_log_rand]
 
     # Shared bin edges for fair comparison
-    min_bin = min(orig.min(), rand.min())
-    max_bin = max(orig.max(), rand.max())
+    min_bin = min(log_eta_orig.min(), log_eta_rand.min())
+    max_bin = max(log_eta_orig.max(), log_eta_rand.max())
     bin_edges = np.linspace(min_bin, max_bin, bins + 1)
 
-    fig, ax = plt.subplots()
-    ax.hist(orig, bins=bin_edges, alpha=0.6, label='Original', color='C0')
-    ax.hist(rand, bins=bin_edges, alpha=0.6, label='Shuffled', color='C1')
+    fig, ax = plt.subplots(figsize=(7, 5))
+    ax.hist(log_eta_orig, bins=bin_edges, alpha=0.6, label='Original', color='C0')
+    ax.hist(log_eta_rand, bins=bin_edges, alpha=0.6, label='Shuffled', color='C1')
     ax.set_xlabel(r'$\log_{10}(\eta)$')
     ax.set_ylabel('Count')
     ax.set_title('Histogram of log10(η): Original vs Shuffled')
+
+    # --- Consistent dividing line: just below the shuffled catalog ---
+    thresh = np.log10(config.ETA0)
+    ax.axvline(thresh, color='k', linestyle='--', linewidth=2, label=f'Separating line: $x={thresh:.2f}$')
     ax.legend()
+    ax.grid(True, linestyle=':', alpha=0.5)
+    plt.tight_layout()
     return fig, ax
 
 
@@ -144,33 +195,31 @@ def plot_logTR_contours(df, levels=8, seed=None, grid_n=200,
     Returns:
         (fig_overlaid, ax_overlaid), (fig_combined, ax_combined)
     """
-    import numpy as np
-    import matplotlib.pyplot as plt
-    from scipy.stats import gaussian_kde
-    from analysis import shuffle_and_compute_nnd
 
     # --- Prepare data ---
-    # Original
     T = np.asarray(df['T'])
     R = np.asarray(df['R'])
-    mask = np.isfinite(T) & np.isfinite(R) & (T > 0) & (R > 0)
-    logT = np.log10(T[mask])
-    logR = np.log10(R[mask])
+    logT = np.log10(T.astype(np.complex128))
+    logR = np.log10(R.astype(np.complex128))
+    logT = np.real(logT)
+    logR = np.real(logR)
+    mask = np.isfinite(logT) & np.isfinite(logR)
+    logT = logT[mask]
+    logR = logR[mask]
     data_orig = np.vstack([logT, logR])
-
+    
     # Shuffled
     nnd_rand = shuffle_and_compute_nnd(df, seed=seed)
     T_rand = nnd_rand['T']
     R_rand = nnd_rand['R']
-    mask_rand = np.isfinite(T_rand) & np.isfinite(R_rand) & (T_rand > 0) & (R_rand > 0)
-    logT_rand = np.log10(T_rand[mask_rand])
-    logR_rand = np.log10(R_rand[mask_rand])
+    logT_rand = np.log10(T_rand.astype(np.complex128))
+    logR_rand = np.log10(R_rand.astype(np.complex128))
+    logT_rand = np.real(logT_rand)
+    logR_rand = np.real(logR_rand)
+    mask_rand = np.isfinite(logT_rand) & np.isfinite(logR_rand)
+    logT_rand = logT_rand[mask_rand]
+    logR_rand = logR_rand[mask_rand]
     data_rand = np.vstack([logT_rand, logR_rand])
-
-    # Combined
-    logT_all = np.concatenate([logT, logT_rand])
-    logR_all = np.concatenate([logR, logR_rand])
-    data_all = np.vstack([logT_all, logR_all])
 
     # Grid
     xmin = min(logT.min(), logT_rand.min())
@@ -188,35 +237,60 @@ def plot_logTR_contours(df, levels=8, seed=None, grid_n=200,
     # KDEs
     kde_orig = gaussian_kde(data_orig)
     kde_rand = gaussian_kde(data_rand)
-    kde_all = gaussian_kde(data_all, bw_method=0.2)
     Z_orig = np.reshape(kde_orig(positions), X.shape)
     Z_rand = np.reshape(kde_rand(positions), X.shape)
-    Z_all = np.reshape(kde_all(positions), X.shape)
 
-    # --- Overlaid plot ---
-    fig_overlaid, ax_overlaid = plt.subplots(figsize=(7, 6))
-    cs_orig = ax_overlaid.contour(X, Y, Z_orig, levels=levels, cmap=cmap_orig, linewidths=2)
-    cs_rand = ax_overlaid.contour(X, Y, Z_rand, levels=levels, cmap=cmap_rand, linewidths=2)
-    solid_proxy = plt.Line2D([], [], color=plt.get_cmap(cmap_orig)(0.7), linestyle='-', linewidth=2)
-    dashed_proxy = plt.Line2D([], [], color=plt.get_cmap(cmap_rand)(0.7), linestyle='-', linewidth=2)
-    ax_overlaid.legend([solid_proxy, dashed_proxy], ['Original', 'Shuffled'])
-    ax_overlaid.set_xlabel(r'$\log_{10}(T)$')
-    ax_overlaid.set_ylabel(r'$\log_{10}(R)$')
-    ax_overlaid.set_title('Contours of log10(T) vs log10(R): Original (solid) & Shuffled (dashed)')
+    # --- Overlaid plot with scatter ---
+    fig_overlaid, ax_overlaid = plt.subplots(figsize=(8, 8))
+
+    # Scatter overlays (plotted first, lower zorder)
+    ax_overlaid.scatter(logT, logR, color=plt.get_cmap(cmap_orig)(0.6), s=15, alpha=0.35, label='Original (scatter)', zorder=1)
+    ax_overlaid.scatter(logT_rand, logR_rand, color=plt.get_cmap(cmap_rand)(0.7), s=15, alpha=0.35, label='Shuffled (scatter)', zorder=2)
+
+    # Contours (plotted above scatter, thicker lines)
+    cs_orig = ax_overlaid.contour(X, Y, Z_orig, levels=levels, cmap=cmap_orig, linewidths=2, zorder=3)
+    cs_rand = ax_overlaid.contour(X, Y, Z_rand, levels=levels, cmap=cmap_rand, linewidths=2, zorder=4)
+
+    # --- Find and plot best separating line with slope -1 ---
+    c = np.log10(config.ETA0)
+    xlim = ax_overlaid.get_xlim()
+    ylim = ax_overlaid.get_ylim()
+    points = []
+    for x in xlim:
+        y = -x + c
+        if ylim[0] <= y <= ylim[1]:
+            points.append((x, y))
+    for y in ylim:
+        x = -y + c
+        if xlim[0] <= x <= xlim[1]:
+            points.append((x, y))
+    points = list(set(points))
+    if len(points) >= 2:
+        points = sorted(points, key=lambda p: p[0])
+        x_vals, y_vals = zip(*points)
+        ax_overlaid.plot(x_vals, y_vals, 'k--', linewidth=2.5, label=f'Separating line: y=-x{c:+.2f}', zorder=5)
+
+    # --- Legend: custom handles for clarity ---
+    from matplotlib.lines import Line2D
+    legend_elements = [
+        Line2D([0], [0], marker='o', color='w', label='Original (scatter)',
+               markerfacecolor=plt.get_cmap(cmap_orig)(0.6), markersize=8, alpha=0.7),
+        Line2D([0], [0], marker='o', color='w', label='Shuffled (scatter)',
+               markerfacecolor=plt.get_cmap(cmap_rand)(0.7), markersize=8, alpha=0.7),
+        Line2D([0], [0], color=plt.get_cmap(cmap_orig)(0.8), lw=2, label='Original (contour)'),
+        Line2D([0], [0], color=plt.get_cmap(cmap_rand)(0.8), lw=2, label='Shuffled (contour)'),
+        Line2D([0], [0], color='k', lw=2.5, linestyle='--', label=f'Separating line: y=-x{c:+.2f}')
+    ]
+    ax_overlaid.legend(handles=legend_elements, loc='upper left', fontsize=12, frameon=True)
+
+    # Labels, grid, aspect
+    ax_overlaid.set_xlabel(r'$\log_{10}(T)$', fontsize=14)
+    ax_overlaid.set_ylabel(r'$\log_{10}(R)$', fontsize=14)
+    ax_overlaid.set_title(r'Contours and Scatter of $\log_{10}(T)$ vs $\log_{10}(R)$: Original & Shuffled', fontsize=16)
     ax_overlaid.grid(True, linestyle=':', alpha=0.5)
+    ax_overlaid.set_xlim(range_min, range_max)
+    ax_overlaid.set_ylim(range_min, range_max)
+    ax_overlaid.set_aspect('equal', adjustable='box')
 
-    # --- Combined plot ---
-    fig_combined, ax_combined = plt.subplots(figsize=(7, 6))
-    cs_combined = ax_combined.contour(X, Y, Z_all, levels=levels, cmap=cmap_combined, linewidths=2)
-    ax_combined.set_xlabel(r'$\log_{10}(T)$')
-    ax_combined.set_ylabel(r'$\log_{10}(R)$')
-    ax_combined.set_title('Contours of log10(T) vs log10(R): Combined Original + Shuffled')
-    ax_combined.grid(True, linestyle=':', alpha=0.5)
-    
-    # Enforce symmetry
-    for ax in [ax_overlaid, ax_combined]:  # add other axes as needed
-        ax.set_xlim(range_min, range_max)
-        ax.set_ylim(range_min, range_max)
-        ax.set_aspect('equal', adjustable='box')
-
-    return (fig_overlaid, ax_overlaid), (fig_combined, ax_combined)
+    plt.tight_layout()
+    return fig_overlaid, ax_overlaid

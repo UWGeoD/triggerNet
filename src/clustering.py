@@ -11,7 +11,7 @@ Core clustering functions for nearest-neighbor earthquake/AE event analysis:
 
 import numpy as np
 import networkx as nx
-from scipy.spatial.distance import pdist
+from scipy.spatial.distance import pdist, squareform
 import config
 
 def compute_nnd(df):
@@ -43,31 +43,31 @@ def compute_nnd(df):
             raise ValueError(f"Column '{col}' required in input DataFrame.")
     if getattr(config, "B", None) is None or getattr(config, "DF", None) is None:
         raise ValueError("Config parameters 'B' and 'DF' must be set before computing NND.")
-
+    
     n = len(df)
     times = df['time'].to_numpy()
     mags  = df['mag'].to_numpy()
     x     = df['x'].to_numpy()
     y     = df['y'].to_numpy()
     z     = df['z'].to_numpy() if 'z' in df.columns else np.zeros(n)
-
+    
     # Compute medians via pairwise distances
     coords = np.column_stack((x, y, z))
     all_dists = pdist(coords, metric='euclidean')
     medD = np.median(all_dists)
     all_dt = pdist(times.reshape(-1, 1), metric='euclidean')
     medT = np.median(all_dt)
-
+    
     # Precompute moment weights
     M = 10 ** (-config.B * mags)
     sqrtM = np.sqrt(M)
-
+    
     # Outputs
     nnd = np.full(n, np.nan)
     parent = np.full(n, -1, dtype=int)
     T_arr = np.full(n, np.nan)
     R_arr = np.full(n, np.nan)
-
+    
     for j in range(1, n):
         # Compute distances/times to all prior events
         dx = x[:j] - x[j]
@@ -78,24 +78,68 @@ def compute_nnd(df):
         valid = dt > 0
         if not np.any(valid):
             continue
-
+    
         # Normalize
         Dn = r[valid] / medD
         Tn = dt[valid] / medT
         W = sqrtM[:j][valid]
-
+    
         # η-metric as defined in clustering literature
         eta_vals = (Dn ** config.DF) * Tn * (W ** 2)
         best = np.argmin(eta_vals)
         i_star = np.flatnonzero(valid)[best]
         nnd[j] = eta_vals[best]
         parent[j] = i_star
-
+    
         # Also record T, R as per TopoMat
         R_arr[j] = (Dn[best] ** config.DF) * W[best]
         T_arr[j] = Tn[best] * W[best]
-
+    
     return {'nnd': nnd, 'parent': parent, 'T': T_arr, 'R': R_arr}
+
+    # # unpack
+    # times      = df['time'].to_numpy()
+    # coords = df[['x','y']].to_numpy()
+    # if 'z' in df:
+    #     coords = np.column_stack((coords, df['z'].to_numpy()))
+    # mags   = df['mag'].to_numpy()
+    # n      = len(df)
+
+    # # build full matrices
+    # all_dists  = squareform(pdist(coords, metric='euclidean'))
+    # all_dt = times.reshape(1, n) - times.reshape(n, 1)
+
+    # # weights
+    # M     = 10.0 ** (-config.B * mags)
+    # sqrtM = np.sqrt(M)
+
+    # # outputs
+    # nnd       = np.full(n, np.nan)
+    # parent    = np.full(n, -1, dtype=int)
+    # R_arr = np.zeros(n)
+    # T_arr = np.zeros(n)
+
+    # # loop “i = 1…N-1” → j = N-i
+    # for i in range(1, n):
+    #     j = n - i
+    #     Dn  = all_dists[j, :j]
+    #     Tn = all_dt[j, :j]
+
+    #     # η-vector exactly as MATLAB: (Dis^Df) * (–Time) * M
+    #     eta_vals = (Dn ** config.DF) * (-Tn) * M[:j]
+
+    #     # find minimal η
+    #     k = np.argmin(eta_vals)
+    #     minval = eta_vals[k]
+
+    #     # record
+    #     nnd[j]       = minval
+    #     parent[j]    = k
+    #     R_arr[j] = (Dn[k] ** config.DF) * sqrtM[k]
+    #     T_arr[j] = (-Tn[k])    * sqrtM[k]
+    
+
+    # return {'nnd': nnd, 'parent': parent, 'T': T_arr, 'R': R_arr}
 
 
 def build_spanning_tree(nnd_dict, nthresh=None):

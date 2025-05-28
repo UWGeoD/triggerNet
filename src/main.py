@@ -149,8 +149,9 @@ def main():
     print(f"    Saved nearest-neighbor results to {nnd_csv}")
 
     # 4. Threshold for strong links
+    eta0, eta0_seed = find_nthresh(df, runs=10)
     resolve_config_param('ETA0', args.eta0, getattr(config, 'ETA0', None),
-                        fallback_fn=lambda: find_nthresh(df, n_init=50, random_state=42))
+                        fallback_fn=lambda: eta0)
     print(f"    Using ETA0 (threshold): {config.ETA0}")
 
     # 5. Build spanning tree and cluster forest
@@ -189,15 +190,14 @@ def main():
 
     # 6. Plot and save histogram of log10 η
     print("[STEP 4] Generating and saving plots...")
-    fig1, ax = plot_log_eta_hist(df, bins=50, seed=42)
+    fig1, ax = plot_log_eta_hist(df, bins=50, seed=eta0_seed)
     hist_png = os.path.join(PLOTS_DIR, f"{args.output_prefix}_hist.png")
     fig1.savefig(hist_png, dpi=300)
 
-    (fig_overlaid, ax_overlaid), (fig_combined, ax_combined) = plot_logTR_contours(
-        df, levels=8, seed=42
+    fig_overlaid, ax_overlaid = plot_logTR_contours(
+        df, levels=8, seed=eta0_seed
     )
     fig_overlaid.savefig(os.path.join(PLOTS_DIR, f"{args.output_prefix}_overlaid.png"), dpi=300, bbox_inches='tight')
-    fig_combined.savefig(os.path.join(PLOTS_DIR, f"{args.output_prefix}_combined.png"), dpi=300, bbox_inches='tight')
     print(f"    Plots saved to {PLOTS_DIR}")
 
     print("\n[COMPLETE] Nearest-neighbor clustering pipeline finished.")
