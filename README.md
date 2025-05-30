@@ -14,8 +14,6 @@ Automatically detects event clusters, computes key statistics, and generates sum
 - [Quick Start](#quick-start)
 - [Usage](#usage)
 - [Repository Structure](#repository-structure)
-- [Example](#example)
-- [Contributing](#contributing)
 - [License](#license)
 - [Citation](#citation)
 
@@ -34,7 +32,7 @@ Automatically detects event clusters, computes key statistics, and generates sum
 
 ## Installation
 
-Requires **Python 3.8+**
+Requires **Python 3.10+**
 
 ### 1. Clone the Repository
 
@@ -58,27 +56,19 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Or, with Conda:
-
-```bash
-conda env create -f environment.yml
-conda activate triggerNet
-```
-
 ---
 
 ## Quick Start
 
 ```bash
 python src/main.py \
-  -i data/example_catalog.csv \
-  -o results/demo \
+  -i data/catalog.csv \
+  -o results \
   --mag_col magnitude \
   --x_col longitude \
   --y_col latitude
 ```
 
-* See `data/example_catalog.csv` for input format.
 * Results and plots will appear in `/results` and `/plots` directories.
 
 ---
@@ -87,26 +77,25 @@ python src/main.py \
 
 **Command-Line Options:**
 
-| Flag                    | Description                                   | Default    |
-| ----------------------- | --------------------------------------------- | ---------- |
-| `-i`, `--input`         | Path to input catalog (`.csv` or `.mat`)      | *required* |
-| `-o`, `--output_prefix` | Prefix for output files                       | `results`  |
-| `--time_col`            | Name of time column in input                  | `time`     |
-| `--x_col`               | Name of x (lon) column                        | `x`        |
-| `--y_col`               | Name of y (lat) column                        | `y`        |
-| `--z_col`               | Name of z/depth column (optional)             | None       |
-| `--mag_col`             | Name of magnitude column                      | `mag`      |
-| `--time_format`         | Datetime parsing format (for CSV)             | None       |
-| `--mag_cutoff`          | Minimum magnitude to include                  | None       |
-| `--q`                   | Normalization exponent Q                      | `0.5`      |
-| `--b`                   | b-value (auto-estimated if not set)           | None       |
-| `--df`                  | Fractal dimension (auto-estimated if not set) | None       |
-| `--eta0`                | Threshold for strong links (auto-estimated)   | None       |
+| Flag                    | Description                                             | Default    |
+| ----------------------- | ------------------------------------------------------- | ---------- |
+| `-i`, `--input`         | Path to input catalog (`.csv` or `.mat`)                | *required* |
+| `-o`, `--output_prefix` | Prefix for output files                                 | `results`  |
+| `--time_col`            | Name of time column in input                            | `time`     |
+| `--x_col`               | Name of x (lon) column                                  | `x`        |
+| `--y_col`               | Name of y (lat) column                                  | `y`        |
+| `--z_col`               | Name of z (depth) column                                | None       |
+| `--mag_col`             | Name of magnitude column                                | `mag`      |
+| `--time_format`         | Datetime parsing format                                 | None       |
+| `--mag_cutoff`          | Minimum magnitude to include                            | None       |
+| `--b`                   | b-value (auto-estimated if not set)                     | None       |
+| `--df`                  | Fractal dimension (auto-estimated if not set)           | None       |
+| `--eta0`                | Threshold for strong links (auto-estimated if not set)  | None       |
 
 *Example:*
 
 ```bash
-python src/main.py -i data/example_catalog.csv -o demo --mag_cutoff 2.0
+python src/main.py -i data/catalog.csv -o demo --mag_cutoff 2.0
 ```
 
 **Outputs:**
@@ -115,9 +104,8 @@ python src/main.py -i data/example_catalog.csv -o demo --mag_cutoff 2.0
 * `results/<prefix>_tree.csv`: Spanning tree edges.
 * `results/<prefix>_adjacency.csv`: Strong-link adjacency matrix.
 * `results/<prefix>_clusters.txt`: List of clusters (components).
-* `plots/<prefix>_hist.png`: Histogram of log₁₀(η).
-* `plots/<prefix>_overlaid.png`: Contour plot (original vs shuffled).
-* `plots/<prefix>_combined.png`: Combined contour plot.
+* `plots/<prefix>_hist.png`: Histogram of log₁₀(η) (original and w/ shuffled).
+* `plots/<prefix>_overlaid.png`: Contour plot (original and w/ shuffled).
 
 ---
 
@@ -133,39 +121,18 @@ triggerNet/
 │   ├── clustering.py
 │   └── utils.py
 ├── data/
-│   └── example_catalog.csv
 ├── plots/
 ├── results/
-├── examples/
-│   └── demo_pipeline.ipynb
 ├── README.md
 ├── LICENSE
 ├── requirements.txt
 ├── .gitignore
-├── CONTRIBUTING.md
-└── CODE_OF_CONDUCT.md
 ```
 
 * **src/**: Source code (main pipeline, analysis, clustering, utilities)
-* **data/**: Example input catalogs (tiny, non-proprietary)
+* **data/**: Input catalogs
 * **plots/**: Output plots (autogenerated)
 * **results/**: Output CSVs (autogenerated)
-* **examples/**: Usage notebooks or advanced examples
-
----
-
-## Example
-
-* **Minimal catalog:** See `data/example_catalog.csv`
-* **Demo notebook:** See `examples/demo_pipeline.ipynb` for a step-by-step walk-through.
-
----
-
-## Contributing
-
-Contributions are welcome!
-See [CONTRIBUTING.md](CONTRIBUTING.md) for how to file issues, contribute code, or suggest enhancements.
-Please read and respect the [CODE\_OF\_CONDUCT.md](CODE_OF_CONDUCT.md).
 
 ---
 
@@ -183,7 +150,7 @@ If you use this pipeline in academic work, please cite as:
 @software{johnson2025triggerNet,
   author    = {Ellie Johnson},
   title     = {triggerNet: Nearest-Neighbor Energy Release Clustering Pipeline},
-  year      = {2024},
+  year      = {2025},
   url       = {https://github.com/UWGeoD/triggerNet},
   version   = {v1.0.0},
 }
