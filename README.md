@@ -56,6 +56,13 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+Or, with Conda:
+
+```bash
+conda env create -f environment.yml
+conda activate triggerNet
+```
+
 ---
 
 ## Quick Start
@@ -126,6 +133,7 @@ triggerNet/
 ├── README.md
 ├── LICENSE
 ├── requirements.txt
+├── environment.yml
 ├── .gitignore
 ```
 
@@ -144,7 +152,7 @@ This project is licensed under the [MIT License](LICENSE).
 
 ## Citation
 
-If you use this pipeline in academic work, please cite as:
+If you use this pipeline, please cite as:
 
 ```
 @software{johnson2025triggerNet,
@@ -159,4 +167,15 @@ If you use this pipeline in academic work, please cite as:
 ---
 
 **Questions?**
-Open an [issue](https://github.com/UWGeoD/triggerNet/issues) or email the maintainer!
+Open an [issue](https://github.com/UWGeoD/triggerNet/issues) or email the maintainer (ekjohnson23@wisc.edu)!
+
+---
+
+## References
+
+1. Davidsen, J., Kwiatek, G., Charalampidou, E. M., Goebel, T., Stanchits, S., Rück, M., & Dresen, G. (2017). Triggering Processes in Rock Fracture. *Physical Review Letters, 119*(6). https://doi.org/10.1103/PhysRevLett.119.068501
+
+2. Li, B. Q., Smith, J. D., & Ross, Z. E. (2021). Basal nucleation and the prevalence of ascending swarms in Long Valley caldera. *Science Advances, 7*(35), eabi8368. https://doi.org/10.1126/sciadv.abi8368
+
+3. Zaliapin, I., & Ben-Zion, Y. (2013). Earthquake clusters in southern California I: Identification and stability. *Journal of Geophysical Research: Solid Earth, 118*(6), 2847–2864. https://doi.org/10.1002/jgrb.50179
+
