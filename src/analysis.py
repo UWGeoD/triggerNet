@@ -33,12 +33,12 @@ def find_nthresh(df, runs=10, **gmm_kwargs):
         - shuffle_and_compute_nnd is used for the null/random distribution.
         - Typically used to set config.ETA0.
     """
-    nnd_rand = shuffle_and_compute_nnd(df)
+    # nnd_rand = shuffle_and_compute_nnd(df)
     real_eta = df['nnd'].values
-    rand_eta = nnd_rand['nnd']
+    # rand_eta = nnd_rand['nnd']
     mask_r = np.isfinite(real_eta) & (real_eta > 0)
-    mask_s = np.isfinite(rand_eta) & (rand_eta > 0)
-    X = np.log10(np.concatenate([real_eta[mask_r], rand_eta[mask_s]]))[:, None]
+    # mask_s = np.isfinite(rand_eta) & (rand_eta > 0)
+    X = np.log10(np.concatenate([real_eta[mask_r]]))[:, None]
     
     gmm = GaussianMixture(n_components=2, **gmm_kwargs).fit(X)
     mu, cov, w = gmm.means_.flatten(), gmm.covariances_.flatten(), gmm.weights_.flatten()
@@ -85,7 +85,7 @@ def find_nthresh(df, runs=10, **gmm_kwargs):
     # return 10**median_thresh, median_seed
 
 
-def shuffle_and_compute_nnd(df, seed=None):
+def shuffle_and_compute_nnd(df, seed=42):
     """
     Shuffle rows of the (x,y) location together, but shuffle time and mag separately,
     then compute nearest‑neighbor distances.
@@ -124,7 +124,7 @@ def shuffle_and_compute_nnd(df, seed=None):
     nnd_rand = compute_nnd(shuffled)
     return nnd_rand
 
-def plot_log_eta_hist(df, bins=50, seed=None):
+def plot_log_eta_hist(df, nnd_rand_dict, bins=50, seed=42):
     """
     Plot histogram of log10(η) for original vs. shuffled catalogs.
 
@@ -149,7 +149,7 @@ def plot_log_eta_hist(df, bins=50, seed=None):
     log_eta_orig = log_eta_orig[mask_log_orig]
 
     # --- Shuffled ---
-    nnd_rand_dict = shuffle_and_compute_nnd(df, seed=seed)
+    # nnd_rand_dict = shuffle_and_compute_nnd(df, seed=seed)
     nnd_rand = nnd_rand_dict['nnd']
     mask_rand = np.isfinite(nnd_rand)
     log_eta_rand = np.log10(nnd_rand[mask_rand].astype(np.complex128))
@@ -162,23 +162,32 @@ def plot_log_eta_hist(df, bins=50, seed=None):
     max_bin = max(log_eta_orig.max(), log_eta_rand.max())
     bin_edges = np.linspace(min_bin, max_bin, bins + 1)
 
-    fig, ax = plt.subplots(figsize=(7, 5))
-    ax.hist(log_eta_orig, bins=bin_edges, alpha=0.6, label='Original', color='C0')
-    ax.hist(log_eta_rand, bins=bin_edges, alpha=0.6, label='Shuffled', color='C1')
-    ax.set_xlabel(r'$\log_{10}(\eta)$')
-    ax.set_ylabel('Count')
-    ax.set_title('Histogram of log10(η): Original vs Shuffled')
+    fig, axs = plt.subplots(1, 2, figsize=(14, 5), sharey=True)
 
-    # --- Consistent dividing line: just below the shuffled catalog ---
+    # Subplot 1: Original only
+    axs[0].hist(log_eta_orig, bins=bin_edges, alpha=0.8, color='C0', label='Original')
+    axs[0].set_xlabel(r'$\log_{10}(\eta)$')
+    axs[0].set_ylabel('Count')
+    axs[0].set_title('Original Catalog')
     thresh = np.log10(config.ETA0)
-    ax.axvline(thresh, color='k', linestyle='--', linewidth=2, label=f'Separating line: $x={thresh:.2f}$')
-    ax.legend()
-    ax.grid(True, linestyle=':', alpha=0.5)
+    axs[0].axvline(thresh, color='k', linestyle='--', linewidth=2, label=f'Separating line: $x={thresh:.2f}$')
+    axs[0].legend()
+    axs[0].grid(True, linestyle=':', alpha=0.5)
+
+    # Subplot 2: Overlayed
+    axs[1].hist(log_eta_orig, bins=bin_edges, alpha=0.6, color='C0', label='Original')
+    axs[1].hist(log_eta_rand, bins=bin_edges, alpha=0.6, color='C1', label='Shuffled', histtype='step', linewidth=2)
+    axs[1].set_xlabel(r'$\log_{10}(\eta)$')
+    axs[1].set_title('Original with Shuffled Overlay')
+    axs[1].axvline(thresh, color='k', linestyle='--', linewidth=2, label=f'Separating line: $x={thresh:.2f}$')
+    axs[1].legend()
+    axs[1].grid(True, linestyle=':', alpha=0.5)
+
     plt.tight_layout()
-    return fig, ax
+    return fig, axs
 
 
-def plot_logTR_contours(df, levels=8, seed=None, grid_n=200, 
+def plot_logTR_contours(df, nnd_rand_dict, levels=8, seed=42, grid_n=200, 
                         cmap_orig='Blues', cmap_rand='Oranges', cmap_combined='Greens'):
     """
     Plot smooth contour lines of log10(T) vs log10(R) for original and shuffled catalogs
@@ -209,9 +218,9 @@ def plot_logTR_contours(df, levels=8, seed=None, grid_n=200,
     data_orig = np.vstack([logT, logR])
     
     # Shuffled
-    nnd_rand = shuffle_and_compute_nnd(df, seed=seed)
-    T_rand = nnd_rand['T']
-    R_rand = nnd_rand['R']
+    # nnd_rand = shuffle_and_compute_nnd(df, seed=seed)
+    T_rand = nnd_rand_dict['T']
+    R_rand = nnd_rand_dict['R']
     logT_rand = np.log10(T_rand.astype(np.complex128))
     logR_rand = np.log10(R_rand.astype(np.complex128))
     logT_rand = np.real(logT_rand)
@@ -240,21 +249,18 @@ def plot_logTR_contours(df, levels=8, seed=None, grid_n=200,
     Z_orig = np.reshape(kde_orig(positions), X.shape)
     Z_rand = np.reshape(kde_rand(positions), X.shape)
 
-    # --- Overlaid plot with scatter ---
-    fig_overlaid, ax_overlaid = plt.subplots(figsize=(8, 8))
+    fig, axs = plt.subplots(1, 2, figsize=(16, 7), sharex=True, sharey=True)
 
-    # Scatter overlays (plotted first, lower zorder)
-    ax_overlaid.scatter(logT, logR, color=plt.get_cmap(cmap_orig)(0.6), s=15, alpha=0.35, label='Original (scatter)', zorder=1)
-    ax_overlaid.scatter(logT_rand, logR_rand, color=plt.get_cmap(cmap_rand)(0.7), s=15, alpha=0.35, label='Shuffled (scatter)', zorder=2)
-
-    # Contours (plotted above scatter, thicker lines)
-    cs_orig = ax_overlaid.contour(X, Y, Z_orig, levels=levels, cmap=cmap_orig, linewidths=2, zorder=3)
-    cs_rand = ax_overlaid.contour(X, Y, Z_rand, levels=levels, cmap=cmap_rand, linewidths=2, zorder=4)
-
-    # --- Find and plot best separating line with slope -1 ---
+    # Subplot 1: Original only
+    axs[0].scatter(logT, logR, color=plt.get_cmap(cmap_orig)(0.6), s=15, alpha=0.35, label='Original (scatter)')
+    cs_orig = axs[0].contour(X, Y, Z_orig, levels=levels, cmap=cmap_orig, linewidths=2)
+    axs[0].set_xlabel(r'$\log_{10}(T)$', fontsize=14)
+    axs[0].set_ylabel(r'$\log_{10}(R)$', fontsize=14)
+    axs[0].set_title('Original Catalog', fontsize=16)
     c = np.log10(config.ETA0)
-    xlim = ax_overlaid.get_xlim()
-    ylim = ax_overlaid.get_ylim()
+    xlim = axs[0].get_xlim()
+    ylim = axs[0].get_ylim()
+    # Draw separating line (slope -1)
     points = []
     for x in xlim:
         y = -x + c
@@ -268,29 +274,38 @@ def plot_logTR_contours(df, levels=8, seed=None, grid_n=200,
     if len(points) >= 2:
         points = sorted(points, key=lambda p: p[0])
         x_vals, y_vals = zip(*points)
-        ax_overlaid.plot(x_vals, y_vals, 'k--', linewidth=2.5, label=f'Separating line: y=-x{c:+.2f}', zorder=5)
+        axs[0].plot(x_vals, y_vals, 'k--', linewidth=2.5, label=f'Separating line: y=-x{c:+.2f}')
+    axs[0].legend()
+    axs[0].grid(True, linestyle=':', alpha=0.5)
+    axs[0].set_aspect('equal', adjustable='box')
 
-    # --- Legend: custom handles for clarity ---
-    from matplotlib.lines import Line2D
-    legend_elements = [
-        Line2D([0], [0], marker='o', color='w', label='Original (scatter)',
-               markerfacecolor=plt.get_cmap(cmap_orig)(0.6), markersize=8, alpha=0.7),
-        Line2D([0], [0], marker='o', color='w', label='Shuffled (scatter)',
-               markerfacecolor=plt.get_cmap(cmap_rand)(0.7), markersize=8, alpha=0.7),
-        Line2D([0], [0], color=plt.get_cmap(cmap_orig)(0.8), lw=2, label='Original (contour)'),
-        Line2D([0], [0], color=plt.get_cmap(cmap_rand)(0.8), lw=2, label='Shuffled (contour)'),
-        Line2D([0], [0], color='k', lw=2.5, linestyle='--', label=f'Separating line: y=-x{c:+.2f}')
-    ]
-    ax_overlaid.legend(handles=legend_elements, loc='upper left', fontsize=12, frameon=True)
-
-    # Labels, grid, aspect
-    ax_overlaid.set_xlabel(r'$\log_{10}(T)$', fontsize=14)
-    ax_overlaid.set_ylabel(r'$\log_{10}(R)$', fontsize=14)
-    ax_overlaid.set_title(r'Contours and Scatter of $\log_{10}(T)$ vs $\log_{10}(R)$: Original & Shuffled', fontsize=16)
-    ax_overlaid.grid(True, linestyle=':', alpha=0.5)
-    ax_overlaid.set_xlim(range_min, range_max)
-    ax_overlaid.set_ylim(range_min, range_max)
-    ax_overlaid.set_aspect('equal', adjustable='box')
+    # Subplot 2: Overlayed
+    axs[1].scatter(logT, logR, color=plt.get_cmap(cmap_orig)(0.6), s=15, alpha=0.35, label='Original (scatter)')
+    axs[1].scatter(logT_rand, logR_rand, color=plt.get_cmap(cmap_rand)(0.7), s=15, alpha=0.35, label='Shuffled (scatter)')
+    cs_orig = axs[1].contour(X, Y, Z_orig, levels=levels, cmap=cmap_orig, linewidths=2)
+    cs_rand = axs[1].contour(X, Y, Z_rand, levels=levels, cmap=cmap_rand, linewidths=2)
+    axs[1].set_xlabel(r'$\log_{10}(T)$', fontsize=14)
+    axs[1].set_title('Original with Shuffled Overlay', fontsize=16)
+    # Draw separating line (slope -1)
+    xlim = axs[1].get_xlim()
+    ylim = axs[1].get_ylim()
+    points = []
+    for x in xlim:
+        y = -x + c
+        if ylim[0] <= y <= ylim[1]:
+            points.append((x, y))
+    for y in ylim:
+        x = -y + c
+        if xlim[0] <= x <= xlim[1]:
+            points.append((x, y))
+    points = list(set(points))
+    if len(points) >= 2:
+        points = sorted(points, key=lambda p: p[0])
+        x_vals, y_vals = zip(*points)
+        axs[1].plot(x_vals, y_vals, 'k--', linewidth=2.5, label=f'Separating line: y=-x{c:+.2f}')
+    axs[1].legend()
+    axs[1].grid(True, linestyle=':', alpha=0.5)
+    axs[1].set_aspect('equal', adjustable='box')
 
     plt.tight_layout()
-    return fig_overlaid, ax_overlaid
+    return fig, axs

@@ -28,6 +28,7 @@ from data_io import load_catalog
 from clustering import compute_nnd, build_spanning_tree, extract_forest
 from analysis import (
     find_nthresh,
+    shuffle_and_compute_nnd,
     plot_log_eta_hist,
     plot_logTR_contours
 )
@@ -190,12 +191,13 @@ def main():
 
     # 6. Plot and save histogram of log10 η
     print("[STEP 4] Generating and saving plots...")
-    fig1, ax = plot_log_eta_hist(df, bins=50, seed=eta0_seed)
+    nnd_rand = shuffle_and_compute_nnd(df)
+    fig1, ax = plot_log_eta_hist(df, nnd_rand, bins=200, seed=eta0_seed)
     hist_png = os.path.join(PLOTS_DIR, f"{args.output_prefix}_hist.png")
     fig1.savefig(hist_png, dpi=300)
 
     fig_overlaid, ax_overlaid = plot_logTR_contours(
-        df, levels=8, seed=eta0_seed
+        df, nnd_rand, levels=8, seed=eta0_seed
     )
     fig_overlaid.savefig(os.path.join(PLOTS_DIR, f"{args.output_prefix}_overlaid.png"), dpi=300, bbox_inches='tight')
     print(f"    Plots saved to {PLOTS_DIR}")
