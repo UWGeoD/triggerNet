@@ -32,6 +32,8 @@ Automatically detects event clusters, computes key statistics, and generates sum
 
 ## Installation
 
+Requires **Python 3.10+**
+
 ### 1. Clone the Repository
 
 ```bash
