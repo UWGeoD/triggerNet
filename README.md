@@ -16,6 +16,7 @@ Automatically detects event clusters, computes key statistics, and generates sum
 - [Repository Structure](#repository-structure)
 - [License](#license)
 - [Citation](#citation)
+- [References](#references)
 
 ---
 
