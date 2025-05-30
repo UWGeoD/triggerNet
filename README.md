@@ -1,6 +1,6 @@
 # triggerNet
 
-A Python pipeline for clustering energy releases (e.g., earthquakes, microseismicity, or acoustic emissions) catalogs using nearest-neighbor distance (NND) analysis.  
+A Python pipeline for clustering energy releases (e.g., earthquakes, microseismicity, or acoustic emissions) catalogs using nearest-neighbor distance (NND) in the space-time-magnitude domain.  
 Automatically detects event clusters, computes key statistics, and generates summary plots—supporting both research and exploratory data analysis.
 
 **Author:** Ellie Johnson
