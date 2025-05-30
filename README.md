@@ -113,7 +113,7 @@ python src/main.py -i data/catalog.csv -o demo --mag_cutoff 2.0
 * `results/<prefix>_adjacency.csv`: Strong-link adjacency matrix.
 * `results/<prefix>_clusters.txt`: List of clusters (components).
 * `plots/<prefix>_hist.png`: Histogram of log₁₀(η) (original and w/ shuffled).
-* `plots/<prefix>_overlaid.png`: Contour plot (original and w/ shuffled).
+* `plots/<prefix>_contour.png`: Contour plot (original and w/ shuffled).
 
 ---
 
