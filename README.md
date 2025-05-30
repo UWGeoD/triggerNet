@@ -86,7 +86,6 @@ python src/main.py \
 | `--mag_col`             | Name of magnitude column                                | `mag`      |
 | `--time_format`         | Datetime parsing format                                 | None       |
 | `--mag_cutoff`          | Minimum magnitude to include                            | None       |
-| `--q`                   | Normalization exponent Q                                | `0.5`      |
 | `--b`                   | b-value (auto-estimated if not set)                     | None       |
 | `--df`                  | Fractal dimension (auto-estimated if not set)           | None       |
 | `--eta0`                | Threshold for strong links (auto-estimated if not set)  | None       |
