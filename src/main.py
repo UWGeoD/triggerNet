@@ -63,8 +63,6 @@ def parse_args():
                         help="Optional datetime format for parsing (e.g., '%%Y-%%m-%%d %%H:%%M:%%S')")
     parser.add_argument('--mag_cutoff', type=float, default=None,
                         help="Minimum magnitude to include in analysis (default: None)")
-    parser.add_argument('--q', type=float, default=0.5,
-                        help="Normalization exponent Q (default: 0.5)")
     parser.add_argument('--b', type=float, default=None,
                         help="b-value for magnitude normalization (default: auto-estimate)")
     parser.add_argument('--df', type=float, default=None,
@@ -126,8 +124,6 @@ def main():
     # 2. Resolve config parameters in proper priority
     #   MAG_CUTOFF
     resolve_config_param('MAG_CUTOFF', args.mag_cutoff, getattr(config, 'MAG_CUTOFF', None))
-    #   Q
-    resolve_config_param('Q', args.q, getattr(config, 'Q', None), default=0.5)
     #   B (b-value)
     resolve_config_param('B', args.b, getattr(config, 'B', None), fallback_fn=lambda: estimate_b_value(df['mag']))
     #   DF (fractal dimension)
@@ -138,7 +134,7 @@ def main():
         resolve_config_param('DF', args.df, getattr(config, 'DF', None),
                             fallback_fn=lambda: estimate_fractal_dimension(df[['x', 'y']]))
 
-    print(f"    Config: B={config.B}, DF={config.DF}, Q={config.Q}, MAG_CUTOFF={config.MAG_CUTOFF}")
+    print(f"    Config: B={config.B}, DF={config.DF}, MAG_CUTOFF={config.MAG_CUTOFF}")
 
     # 3. Compute nearest-neighbor distances (NND)
     print("[STEP 2] Computing nearest-neighbor distances...")
@@ -197,9 +193,9 @@ def main():
     fig1.savefig(hist_png, dpi=300)
 
     fig_overlaid, ax_overlaid = plot_logTR_contours(
-        df, nnd_rand, levels=8, seed=eta0_seed
+        df, nnd_rand, levels=8, seed=42
     )
-    fig_overlaid.savefig(os.path.join(PLOTS_DIR, f"{args.output_prefix}_overlaid.png"), dpi=300, bbox_inches='tight')
+    fig_overlaid.savefig(os.path.join(PLOTS_DIR, f"{args.output_prefix}_contour.png"), dpi=300, bbox_inches='tight')
     print(f"    Plots saved to {PLOTS_DIR}")
 
     print("\n[COMPLETE] Nearest-neighbor clustering pipeline finished.")
