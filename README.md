@@ -6,9 +6,7 @@ Automatically detects event clusters, computes key statistics, and generates sum
 ![results_overlaid_volc_python](https://github.com/user-attachments/assets/68aa4619-3918-4830-ac76-09d74d65068a)
 
 
-**Author:** GeoD Research Group
-
-**Contributors:** Ellie Johnson, Jesse Hampton
+**Authors:** Ellie K. Johnson and Jesse C. Hampton
 
 ---
 
@@ -161,8 +159,8 @@ This project is licensed under the [MIT License](LICENSE).
 If you use this pipeline, please cite as:
 
 ```
-@software{geod2025triggerNet,
-  author    = {GeoD Research Group},
+@software{johnson2025triggerNet,
+  author    = {Johnson, Ellie K. and Hampton, Jesse C.},
   title     = {triggerNet: Nearest-Neighbor Energy Release Clustering Pipeline},
   year      = {2025},
   url       = {https://github.com/UWGeoD/triggerNet},
