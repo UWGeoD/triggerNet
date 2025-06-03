@@ -164,7 +164,6 @@ If you use this pipeline, please cite as:
   title     = {triggerNet: Nearest-Neighbor Energy Release Clustering Pipeline},
   year      = {2025},
   url       = {https://github.com/UWGeoD/triggerNet},
-  version   = {v1.0.0},
 }
 ```
 
