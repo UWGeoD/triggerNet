@@ -7,6 +7,7 @@ Automatically detects event clusters, computes key statistics, and generates sum
 
 
 **Author:** GeoD Research Group
+
 **Contributors:** Ellie Johnson, Jesse Hampton
 
 ---
