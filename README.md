@@ -176,9 +176,11 @@ Open an [issue](https://github.com/UWGeoD/triggerNet/issues) or email the mainta
 
 ## References
 
-1. Davidsen, J., Kwiatek, G., Charalampidou, E. M., Goebel, T., Stanchits, S., Rück, M., & Dresen, G. (2017). Triggering Processes in Rock Fracture. *Physical Review Letters, 119*(6). https://doi.org/10.1103/PhysRevLett.119.068501
+1. Aki, K. (1965). Maximum likelihood estimate of b in the formula $\log N = a - bM$ and its confidence limits. Bulletin of the Earthquake Research Institute, 43, 237–239.
 
-2. Li, B. Q., Smith, J. D., & Ross, Z. E. (2021). Basal nucleation and the prevalence of ascending swarms in Long Valley caldera. *Science Advances, 7*(35), eabi8368. https://doi.org/10.1126/sciadv.abi8368
+2. Davidsen, J., Kwiatek, G., Charalampidou, E. M., Goebel, T., Stanchits, S., Rück, M., & Dresen, G. (2017). Triggering Processes in Rock Fracture. *Physical Review Letters, 119*(6). https://doi.org/10.1103/PhysRevLett.119.068501
 
-3. Zaliapin, I., & Ben-Zion, Y. (2013). Earthquake clusters in southern California I: Identification and stability. *Journal of Geophysical Research: Solid Earth, 118*(6), 2847–2864. https://doi.org/10.1002/jgrb.50179
+3. Li, B. Q., Smith, J. D., & Ross, Z. E. (2021). Basal nucleation and the prevalence of ascending swarms in Long Valley caldera. *Science Advances, 7*(35), eabi8368. https://doi.org/10.1126/sciadv.abi8368
+
+4. Zaliapin, I., & Ben-Zion, Y. (2013). Earthquake clusters in southern California I: Identification and stability. *Journal of Geophysical Research: Solid Earth, 118*(6), 2847–2864. https://doi.org/10.1002/jgrb.50179
 
