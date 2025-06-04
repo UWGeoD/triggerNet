@@ -100,7 +100,7 @@ python src/main.py \
 | `--time_format`         | Datetime parsing format                                 | None       |
 | `--mag_cutoff`          | Minimum magnitude to include                            | None       |
 | `--b`                   | b-value (auto-estimated if not set)                     | None       |
-| `--df`                  | Fractal dimension (auto-estimated if not set)           | None       |
+| `--df`                  | Fractal dimension                                       | `1.6`      |
 | `--eta0`                | Threshold for strong links (auto-estimated if not set)  | None       |
 
 *Example:*
