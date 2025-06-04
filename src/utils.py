@@ -4,7 +4,6 @@ utils.py
 Utility functions for earthquake/fracture catalog analysis:
 
 - Gutenberg-Richter b-value estimation
-- Spatial fractal (correlation) dimension estimation
 
 These functions are used for parameter estimation in the nearest-neighbor clustering pipeline.
 """
@@ -32,7 +31,7 @@ def estimate_b_value(mags, m_min=None, bin_width=None):
         ValueError: If mags is empty or has insufficient unique values for bin width estimation.
 
     Reference:
-        Aki, K. (1965). Maximum likelihood estimate of b in the formula log N = a - bM.
+        Aki, K. (1965). Aki, K. Maximum likelihood estimate of b in the formula log N = a - bM and its confidence limits.
     """
     mags = np.asarray(mags)
     if mags.size == 0:
@@ -48,56 +47,3 @@ def estimate_b_value(mags, m_min=None, bin_width=None):
     mean_mag = mags.mean()
     b_est = np.log10(np.e) / (mean_mag - (m_min - bin_width / 2))
     return b_est
-
-
-def estimate_fractal_dimension(coords, r_vals=None):
-    """
-    Estimate spatial fractal (correlation) dimension using the pair-count method.
-
-    The correlation dimension Df is the slope in log-log space:
-        C(r) ~ r^Df
-    where C(r) is the fraction of pairs within distance r.
-
-    Args:
-        coords (array-like): (N, d) array of event positions (x/y or x/y/z).
-        r_vals (array-like, optional): Radii at which to compute C(r). If None, auto-chosen.
-
-    Returns:
-        float: Estimated fractal (correlation) dimension.
-
-    Reference:
-        Grassberger, P., & Procaccia, I. (1983). Characterization of strange attractors.
-    """
-    pts = np.asarray(coords)
-    if pts.ndim != 2:
-        raise ValueError(f"coords must be 2D array of shape (N, d), got {pts.shape}")
-
-    N = pts.shape[0]
-    if N < 2:
-        raise ValueError("At least two points required for fractal dimension estimation.")
-
-    # Build k-d tree for fast neighbor counting
-    tree = cKDTree(pts)
-
-    # Choose radii for correlation sum
-    if r_vals is None:
-        # Compute all pairwise distances, ignore zeros on diagonal
-        dmat = tree.sparse_distance_matrix(tree, max_distance=np.inf)
-        dmat = coo_matrix(dmat)
-        if dmat.data.size == 0:
-            raise ValueError("All points are identical; cannot estimate fractal dimension.")
-        dmax = np.max(dmat.data)
-        r_vals = np.logspace(np.log10(dmax * 0.01), np.log10(dmax * 0.25), num=20)
-
-    C = []
-    for r in r_vals:
-        # cKDTree.count_neighbors counts all pairs (including i=j); subtract N for self-pairs
-        count = tree.count_neighbors(tree, r) - N
-        # Normalize by total number of pairs (N choose 2)
-        C.append(count / (N * (N - 1)))
-
-    # Fit slope in linear region of log(C) vs log(r)
-    log_r = np.log(r_vals)
-    log_C = np.log(C)
-    slope, _ = np.polyfit(log_r, log_C, 1)
-    return float(slope)
