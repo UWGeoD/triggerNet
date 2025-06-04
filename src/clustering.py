@@ -173,7 +173,7 @@ def build_spanning_tree(nnd_dict, nthresh=None):
     for j in range(1, n):
         i = parent[j]
         eta_val = nnd[j]
-        strong = eta_val < nthresh
+        strong = int(eta_val < nthresh)
         G.add_edge(i, j, eta=eta_val, strong=strong)
     return G
 

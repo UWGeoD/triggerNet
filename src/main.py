@@ -66,7 +66,7 @@ def parse_args():
     parser.add_argument('--b', type=float, default=None,
                         help="b-value for magnitude normalization (default: auto-estimate)")
     parser.add_argument('--df', type=float, default=None,
-                        help="Fractal dimension (default: auto-estimate)")
+                        help="Fractal dimension (default: 1.6)")
     parser.add_argument('--eta0', type=float, default=None,
                         help="Threshold for strong links (default: auto-estimate)")
     return parser.parse_args()
@@ -116,6 +116,7 @@ def main():
             z_col=args.z_col,
             time_format=args.time_format
         )
+        df = load_catalog(file_path="data/mixed_mode_orig.mat")
     except Exception as e:
         print(f"[ERROR] Failed to load catalog: {e}")
         sys.exit(1)
@@ -127,12 +128,7 @@ def main():
     #   B (b-value)
     resolve_config_param('B', args.b, getattr(config, 'B', None), fallback_fn=lambda: estimate_b_value(df['mag']))
     #   DF (fractal dimension)
-    if args.z_col and args.z_col in df.columns:
-        resolve_config_param('DF', args.df, getattr(config, 'DF', None),
-                            fallback_fn=lambda: estimate_fractal_dimension(df[['x', 'y', 'z']]))
-    else:
-        resolve_config_param('DF', args.df, getattr(config, 'DF', None),
-                            fallback_fn=lambda: estimate_fractal_dimension(df[['x', 'y']]))
+    resolve_config_param('DF', args.df, getattr(config, 'DF', None), default=1.6)
 
     print(f"    Config: B={config.B}, DF={config.DF}, MAG_CUTOFF={config.MAG_CUTOFF}")
 
@@ -141,9 +137,6 @@ def main():
     nnd_dict = compute_nnd(df)
     for k in ('nnd', 'parent', 'T', 'R'):
         df[k] = nnd_dict[k]
-    nnd_csv = os.path.join(RESULTS_DIR, f"{args.output_prefix}_nnd.csv")
-    df.to_csv(nnd_csv, index=False)
-    print(f"    Saved nearest-neighbor results to {nnd_csv}")
 
     # 4. Threshold for strong links
     eta0, eta0_seed = find_nthresh(df, runs=10)
@@ -164,26 +157,44 @@ def main():
     tree_csv = os.path.join(RESULTS_DIR, f"{args.output_prefix}_tree.csv")
     edges.to_csv(tree_csv, index=False)
     print(f"    Spanning tree saved to {tree_csv}")
+    
+    # Merge parent, eta, and strong columns into df
+    orig_index = df.index
+    df = df.merge(
+        edges,
+        how='left', left_index=True, right_on='v'
+    )
+    df.set_index(orig_index, inplace=True)
+    df.drop(columns=['u', 'v', 'eta'], inplace=True)
 
     # Save adjacency matrix of strong links (as .csv)
     directed_forest = nx.DiGraph()
     directed_forest.add_nodes_from(forest.nodes())
-    strong_edges = edges[edges['strong']]
+    strong_edges = edges[edges['strong'] == 1]
     for _, row in strong_edges.iterrows():
         directed_forest.add_edge(int(row['u']), int(row['v']))
     nodes = sorted(directed_forest.nodes())
     A = nx.to_numpy_array(directed_forest, nodelist=nodes, dtype=int)
     adj_df = pd.DataFrame(A, index=nodes, columns=nodes)
+    df['topo_descendants'] = df.index.map(lambda x: len(nx.descendants(directed_forest, x)))
     adj_csv = os.path.join(RESULTS_DIR, f"{args.output_prefix}_adjacency.csv")
     adj_df.to_csv(adj_csv)
     print(f"    Strong-link adjacency matrix saved to {adj_csv}")
 
     # Save list of clusters (forest connected components)
     cluster_txt = os.path.join(RESULTS_DIR, f"{args.output_prefix}_clusters.txt")
+    cluster_map = {}
     with open(cluster_txt, "w") as f:
         for i, comp in enumerate(nx.connected_components(forest), 1):
+            for node in comp:
+                cluster_map[node] = i
             f.write(f"Cluster {i}: {sorted(comp)}\n")
+    df['cluster_id'] = df.index.map(cluster_map)
     print(f"    Cluster list saved to {cluster_txt}")
+    
+    nnd_csv = os.path.join(RESULTS_DIR, f"{args.output_prefix}_nnd.csv")
+    df.to_csv(nnd_csv, index=False)
+    print(f"    Saved full catalog results to {nnd_csv}")
 
     # 6. Plot and save histogram of log10 η
     print("[STEP 4] Generating and saving plots...")
