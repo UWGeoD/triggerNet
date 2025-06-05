@@ -90,7 +90,7 @@ def load_catalog(
     # --- Parse Time Column ---
     if time_format:
         try:
-            df['time'] = pd.to_datetime(df['time'], format=time_format)
+            df['time'] = pd.to_datetime(df['time'], format=time_format).astype('int64').to_numpy() / 1e9
         except Exception as e:
             raise RuntimeError(f"Failed to parse time column with format '{time_format}': {e}")
 
