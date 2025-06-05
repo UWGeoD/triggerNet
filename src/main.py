@@ -161,18 +161,18 @@ def main():
     print(f"    Spanning tree saved to {tree_csv}")
 
 
-    # Save adjacency matrix of strong links (as .csv)
-    directed_forest = nx.DiGraph()
-    directed_forest.add_nodes_from(forest.nodes())
-    strong_edges = edges[edges['strong'] == 1]
-    for _, row in strong_edges.iterrows():
-        directed_forest.add_edge(int(row['u']), int(row['v']))
-    nodes = sorted(directed_forest.nodes())
-    A = nx.to_numpy_array(directed_forest, nodelist=nodes, dtype=int)
-    adj_df = pd.DataFrame(A, index=nodes, columns=nodes)
-    adj_csv = os.path.join(RESULTS_DIR, f"{args.output_prefix}_adjacency.csv")
-    adj_df.to_csv(adj_csv)
-    print(f"    Strong-link adjacency matrix saved to {adj_csv}")
+    # # Save adjacency matrix of strong links (as .csv)
+    # directed_forest = nx.DiGraph()
+    # directed_forest.add_nodes_from(forest.nodes())
+    # strong_edges = edges[edges['strong'] == 1]
+    # for _, row in strong_edges.iterrows():
+    #     directed_forest.add_edge(int(row['u']), int(row['v']))
+    # nodes = sorted(directed_forest.nodes())
+    # A = nx.to_numpy_array(directed_forest, nodelist=nodes, dtype=int)
+    # adj_df = pd.DataFrame(A, index=nodes, columns=nodes)
+    # adj_csv = os.path.join(RESULTS_DIR, f"{args.output_prefix}_adjacency.csv")
+    # adj_df.to_csv(adj_csv)
+    # print(f"    Strong-link adjacency matrix saved to {adj_csv}")
 
     # Save list of clusters (forest connected components)
     cluster_txt = os.path.join(RESULTS_DIR, f"{args.output_prefix}_clusters.txt")
