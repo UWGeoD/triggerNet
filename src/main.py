@@ -106,6 +106,8 @@ def main():
 
     # 1. Load and filter catalog
     print(f"\n[STEP 1] Loading catalog: {args.input}")
+    #   MAG_CUTOFF
+    resolve_config_param('MAG_CUTOFF', args.mag_cutoff, getattr(config, 'MAG_CUTOFF', None))
     try:
         df = load_catalog(
             file_path=args.input,
@@ -122,8 +124,6 @@ def main():
     print(f"    Loaded {len(df)} events.")
     
     # 2. Resolve config parameters in proper priority
-    #   MAG_CUTOFF
-    resolve_config_param('MAG_CUTOFF', args.mag_cutoff, getattr(config, 'MAG_CUTOFF', None))
     #   B (b-value)
     resolve_config_param('B', args.b, getattr(config, 'B', None), fallback_fn=lambda: estimate_b_value(df['mag']))
     #   DF (fractal dimension)
