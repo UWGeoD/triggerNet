@@ -22,7 +22,7 @@ import networkx as nx
 import sys
 import os
 
-from utils import estimate_b_value, estimate_fractal_dimension
+from utils import estimate_b_value
 import config
 from data_io import load_catalog
 from clustering import compute_nnd, build_spanning_tree, extract_forest
