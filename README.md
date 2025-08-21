@@ -50,8 +50,8 @@ cd triggerNet
 **Recommended:** Use a virtual environment.
 
 ```bash
-python -m venv venv
-source venv/bin/activate
+python3.10 -m venv triggerNetEnv
+source triggerNetEnv/bin/activate
 ```
 
 **Install dependencies:**
