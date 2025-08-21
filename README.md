@@ -1,6 +1,6 @@
 # triggerNet
 
-A Python pipeline for clustering energy releases (e.g., earthquakes, microseismicity, or acoustic emissions) catalogs using nearest-neighbor distance (NND) in the space-time-magnitude domain.  
+A Python pipeline for clustering energy releases (e.g., earthquakes, microseismicity, or acoustic emissions) using nearest-neighbor distance (NND) in the space-time-magnitude domain.  
 Automatically detects event clusters, computes key statistics, and generates summary plots—supporting both research and exploratory data analysis.
 
 ![results_overlaid_volc_python](https://github.com/user-attachments/assets/68aa4619-3918-4830-ac76-09d74d65068a)
@@ -60,13 +60,6 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Or, with Conda:
-
-```bash
-conda env create -f environment.yml
-conda activate triggerNet
-```
-
 ---
 
 ## Quick Start
@@ -99,6 +92,7 @@ python src/main.py \
 | `--mag_col`             | Name of magnitude column                                | `mag`      |
 | `--time_format`         | Datetime parsing format                                 | None       |
 | `--mag_cutoff`          | Minimum magnitude to include                            | None       |
+| `--velocity`            | Maximum allowed propagation velocity                    | None       |
 | `--b`                   | b-value (auto-estimated if not set)                     | None       |
 | `--df`                  | Fractal dimension                                       | `1.6`      |
 | `--eta0`                | Threshold for strong links (auto-estimated if not set)  | None       |
@@ -113,7 +107,6 @@ python src/main.py -i data/catalog.csv -o demo --mag_cutoff 2.0
 
 * `results/<prefix>_nnd.csv`: Catalog with NND and parent assignments.
 * `results/<prefix>_tree.csv`: Spanning tree edges.
-* `results/<prefix>_adjacency.csv`: Strong-link adjacency matrix.
 * `results/<prefix>_clusters.txt`: List of clusters (components).
 * `plots/<prefix>_hist.png`: Histogram of log₁₀(η) (original and w/ shuffled).
 * `plots/<prefix>_contour.png`: Contour plot (original and w/ shuffled).
@@ -183,4 +176,3 @@ Open an [issue](https://github.com/UWGeoD/triggerNet/issues) or email the mainta
 3. Li, B. Q., Smith, J. D., & Ross, Z. E. (2021). Basal nucleation and the prevalence of ascending swarms in Long Valley caldera. *Science Advances, 7*(35), eabi8368. https://doi.org/10.1126/sciadv.abi8368
 
 4. Zaliapin, I., & Ben-Zion, Y. (2013). Earthquake clusters in southern California I: Identification and stability. *Journal of Geophysical Research: Solid Earth, 118*(6), 2847–2864. https://doi.org/10.1002/jgrb.50179
-
