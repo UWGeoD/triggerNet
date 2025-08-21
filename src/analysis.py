@@ -40,7 +40,7 @@ def find_nthresh(df, runs=10, **gmm_kwargs):
     # mask_s = np.isfinite(rand_eta) & (rand_eta > 0)
     X = np.log10(np.concatenate([real_eta[mask_r]]))[:, None]
     
-    gmm = GaussianMixture(n_components=2, **gmm_kwargs).fit(X)
+    gmm = GaussianMixture(n_components=2, n_init=10, **gmm_kwargs).fit(X)
     mu, cov, w = gmm.means_.flatten(), gmm.covariances_.flatten(), gmm.weights_.flatten()
     idx = np.argsort(mu)
     mu0, mu1 = mu[idx[0]], mu[idx[1]]
@@ -61,29 +61,6 @@ def find_nthresh(df, runs=10, **gmm_kwargs):
     
     eta_star = 10 ** x_star
     return eta_star, None
-
-    # thresh_seed_pairs = []
-    # for i in range(runs):
-    #     # --- Shuffled ---
-    #     nnd_rand_dict = shuffle_and_compute_nnd(df, seed=i)
-    #     nnd_rand = nnd_rand_dict['nnd']
-    #     mask_rand = np.isfinite(nnd_rand)
-    #     log_eta_rand = np.log10(nnd_rand[mask_rand].astype(np.complex128))
-    #     log_eta_rand = np.real(log_eta_rand)
-    #     mask_log_rand = np.isfinite(log_eta_rand)
-    #     log_eta_rand = log_eta_rand[mask_log_rand]
-    #     quantile = 0.0005  # 5th percentile; adjust as needed (e.g., 0.01 for 1%)
-    #     thresh = np.quantile(log_eta_rand, quantile)
-    #     thresh_seed_pairs.append((thresh, i))
-
-    # # Find the median threshold and its associated seed
-    # thresh_arr = np.array([pair[0] for pair in thresh_seed_pairs])
-    # seeds_arr = np.array([pair[1] for pair in thresh_seed_pairs])
-    # median_idx = np.argsort(thresh_arr)[len(thresh_arr)//2]
-    # median_thresh = thresh_arr[median_idx]
-    # median_seed = seeds_arr[median_idx]
-    # return 10**median_thresh, median_seed
-
 
 def shuffle_and_compute_nnd(df, seed=42):
     """
@@ -282,8 +259,8 @@ def plot_logTR_contours(df, nnd_rand_dict, levels=8, seed=42, grid_n=200,
     # Subplot 2: Overlayed
     axs[1].scatter(logT, logR, color=plt.get_cmap(cmap_orig)(0.6), s=15, alpha=0.35, label='Original (scatter)')
     axs[1].scatter(logT_rand, logR_rand, color=plt.get_cmap(cmap_rand)(0.7), s=15, alpha=0.35, label='Shuffled (scatter)')
-    cs_orig = axs[1].contour(X, Y, Z_orig, levels=levels, cmap=cmap_orig, linewidths=2)
-    cs_rand = axs[1].contour(X, Y, Z_rand, levels=levels, cmap=cmap_rand, linewidths=2)
+    axs[1].contour(X, Y, Z_orig, levels=levels, cmap=cmap_orig, linewidths=2)
+    axs[1].contour(X, Y, Z_rand, levels=levels, cmap=cmap_rand, linewidths=2)
     axs[1].set_xlabel(r'$\log_{10}(T)$', fontsize=14)
     axs[1].set_title('Original with Shuffled Overlay', fontsize=16)
     # Draw separating line (slope -1)

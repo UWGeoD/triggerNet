@@ -9,8 +9,6 @@ These functions are used for parameter estimation in the nearest-neighbor cluste
 """
 
 import numpy as np
-from scipy.spatial import cKDTree
-from scipy.sparse import coo_matrix
 
 def estimate_b_value(mags, m_min=None, bin_width=None):
     """

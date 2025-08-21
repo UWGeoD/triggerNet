@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 main.py
 
@@ -63,6 +61,8 @@ def parse_args():
                         help="Optional datetime format for parsing (e.g., '%%Y-%%m-%%d %%H:%%M:%%S')")
     parser.add_argument('--mag_cutoff', type=float, default=None,
                         help="Minimum magnitude to include in analysis (default: None)")
+    parser.add_argument('--velocity', type=float, default=None,
+                        help="Maximum allowed propagation velocity for event connections (distance/time). Connections faster than this will be excluded. (default: None)")
     parser.add_argument('--b', type=float, default=None,
                         help="b-value for magnitude normalization (default: auto-estimate)")
     parser.add_argument('--df', type=float, default=None,
@@ -124,12 +124,14 @@ def main():
     print(f"    Loaded {len(df)} events.")
     
     # 2. Resolve config parameters in proper priority
+    #   VELOCITY (maximum allowed propagation velocity)
+    resolve_config_param('VELOCITY', args.velocity, getattr(config, 'VELOCITY', None))
     #   B (b-value)
     resolve_config_param('B', args.b, getattr(config, 'B', None), fallback_fn=lambda: estimate_b_value(df['mag']))
     #   DF (fractal dimension)
     resolve_config_param('DF', args.df, getattr(config, 'DF', None), default=1.6)
 
-    print(f"    Config: B={config.B}, DF={config.DF}, MAG_CUTOFF={config.MAG_CUTOFF}")
+    print(f"    Config: B={config.B}, DF={config.DF}, MAG_CUTOFF={config.MAG_CUTOFF}, VELOCITY={config.VELOCITY}")
 
     # 3. Compute nearest-neighbor distances (NND)
     print("[STEP 2] Computing nearest-neighbor distances...")

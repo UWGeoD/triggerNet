@@ -11,7 +11,7 @@ Core clustering functions for nearest-neighbor earthquake/AE event analysis:
 
 import numpy as np
 import networkx as nx
-from scipy.spatial.distance import pdist, squareform
+from scipy.spatial.distance import pdist
 import config
 
 def compute_nnd(df):
@@ -76,6 +76,13 @@ def compute_nnd(df):
         r = np.sqrt(dx * dx + dy * dy + dz * dz)
         dt = times[j] - times[:j]
         valid = dt > 0
+        
+        # Velocity constraint
+        if getattr(config, "VELOCITY", None) is not None:
+            velocity_valid = np.zeros_like(valid)
+            velocity_valid[valid] = (r[valid] / dt[valid]) <= config.VELOCITY
+            valid = valid & velocity_valid
+        
         if not np.any(valid):
             continue
     
@@ -96,51 +103,6 @@ def compute_nnd(df):
         T_arr[j] = Tn[best] * W[best]
     
     return {'nnd': nnd, 'parent': parent, 'T': T_arr, 'R': R_arr}
-
-    # # unpack
-    # times      = df['time'].to_numpy()
-    # coords = df[['x','y']].to_numpy()
-    # if 'z' in df:
-    #     coords = np.column_stack((coords, df['z'].to_numpy()))
-    # mags   = df['mag'].to_numpy()
-    # n      = len(df)
-
-    # # build full matrices
-    # all_dists  = squareform(pdist(coords, metric='euclidean'))
-    # all_dt = times.reshape(1, n) - times.reshape(n, 1)
-
-    # # weights
-    # M     = 10.0 ** (-config.B * mags)
-    # sqrtM = np.sqrt(M)
-
-    # # outputs
-    # nnd       = np.full(n, np.nan)
-    # parent    = np.full(n, -1, dtype=int)
-    # R_arr = np.zeros(n)
-    # T_arr = np.zeros(n)
-
-    # # loop “i = 1…N-1” → j = N-i
-    # for i in range(1, n):
-    #     j = n - i
-    #     Dn  = all_dists[j, :j]
-    #     Tn = all_dt[j, :j]
-
-    #     # η-vector exactly as MATLAB: (Dis^Df) * (–Time) * M
-    #     eta_vals = (Dn ** config.DF) * (-Tn) * M[:j]
-
-    #     # find minimal η
-    #     k = np.argmin(eta_vals)
-    #     minval = eta_vals[k]
-
-    #     # record
-    #     nnd[j]       = minval
-    #     parent[j]    = k
-    #     R_arr[j] = (Dn[k] ** config.DF) * sqrtM[k]
-    #     T_arr[j] = (-Tn[k])    * sqrtM[k]
-    
-
-    # return {'nnd': nnd, 'parent': parent, 'T': T_arr, 'R': R_arr}
-
 
 def build_spanning_tree(nnd_dict, nthresh=None):
     """
@@ -176,7 +138,6 @@ def build_spanning_tree(nnd_dict, nthresh=None):
         strong = int(eta_val < nthresh)
         G.add_edge(i, j, eta=eta_val, strong=strong)
     return G
-
 
 def extract_forest(tree):
     """

@@ -16,6 +16,8 @@ ETA0 : float or None
     Threshold for strong links (η₀). If None, will be estimated.
 MAG_CUTOFF : float or None
     Magnitude cutoff for events (e.g., 2.0 to include m ≥ 2). If None, include all.
+VELOCITY : float or None
+    Maximum allowed propagation velocity for event connection (distance/time). If None, no velocity constraint is applied.
 
 Notes
 -----
@@ -27,4 +29,4 @@ B: float | None = None      # Will be estimated if not set
 DF: float = 1.6
 ETA0: float | None = None   # Will be estimated if not set
 MAG_CUTOFF: float | None = None
-
+VELOCITY: float | None = None
