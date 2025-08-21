@@ -60,7 +60,7 @@ def find_nthresh(df, runs=10, **gmm_kwargs):
         x_star = r1 if mu0 < r1 < mu1 else r2
     
     eta_star = 10 ** x_star
-    return eta_star, None
+    return eta_star
 
 def shuffle_and_compute_nnd(df, seed=42):
     """

@@ -140,9 +140,8 @@ def main():
         df[k] = nnd_dict[k]
 
     # 4. Threshold for strong links
-    eta0, eta0_seed = find_nthresh(df, runs=10)
     resolve_config_param('ETA0', args.eta0, getattr(config, 'ETA0', None),
-                        fallback_fn=lambda: eta0)
+                        fallback_fn=lambda: find_nthresh(df, runs=10))
     print(f"    Using ETA0 (threshold): {config.ETA0}")
 
     # 5. Build spanning tree and cluster forest
@@ -186,7 +185,7 @@ def main():
     # 6. Plot and save histogram of log10 η
     print("[STEP 4] Generating and saving plots...")
     nnd_rand = shuffle_and_compute_nnd(df)
-    fig1, ax = plot_log_eta_hist(df, nnd_rand, bins=200, seed=eta0_seed)
+    fig1, ax = plot_log_eta_hist(df, nnd_rand, bins=200)
     hist_png = os.path.join(PLOTS_DIR, f"{args.output_prefix}_hist.png")
     fig1.savefig(hist_png, dpi=300)
 
