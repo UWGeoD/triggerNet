@@ -1,6 +1,6 @@
 # triggerNet
 
-A Python pipeline for clustering energy releases (e.g., earthquakes, microseismicity, or acoustic emissions) using nearest-neighbor distance (NND) in the space-time-magnitude domain.  
+A Python pipeline for clustering energy releases (e.g., earthquakes, microseismicity, or acoustic emissions) using nearest-neighbor distance in the space-time-magnitude domain.  
 Automatically detects event clusters, computes key statistics, and generates summary plots—supporting both research and exploratory data analysis.
 
 ![results_overlaid_volc_python](https://github.com/user-attachments/assets/68aa4619-3918-4830-ac76-09d74d65068a)
@@ -50,8 +50,8 @@ cd triggerNet
 **Recommended:** Use a virtual environment.
 
 ```bash
-python -m venv venv
-source venv/bin/activate
+python3.10 -m venv triggerNetEnv
+source triggerNetEnv/bin/activate
 ```
 
 **Install dependencies:**
