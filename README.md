@@ -130,7 +130,6 @@ triggerNet/
 ├── README.md
 ├── LICENSE
 ├── requirements.txt
-├── environment.yml
 ├── .gitignore
 ```
 
