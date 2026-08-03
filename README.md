@@ -142,7 +142,7 @@ triggerNet/
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE). Free for research, education, and other noncommercial use. For commercial licensing, please contact the maintainer.
 
 ---
 
